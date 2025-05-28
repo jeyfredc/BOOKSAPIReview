@@ -6,26 +6,33 @@ using System.Data;
 
 namespace BooksAPIReviews.Models.DAO
 {
-    public class SearchDao 
+    public class SearchDao : IDisposable, IAsyncDisposable
     {
         private readonly NpgsqlConnection _connection;
         private readonly ILogger<SearchDao> _logger;
+        private bool _disposed = false;
 
-        // Inyectamos la conexión directamente
-        public SearchDao(NpgsqlConnection _connection, ILogger<SearchDao> logger)
+        public SearchDao(NpgsqlConnection connection, ILogger<SearchDao> logger)
         {
-            _connection = _connection ?? throw new ArgumentNullException(nameof(_connection));
+            _connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            // Verificar la conexión
             if (string.IsNullOrEmpty(_connection.ConnectionString))
             {
                 _logger.LogError("La cadena de conexión está vacía");
                 throw new InvalidOperationException("La cadena de conexión no está configurada");
             }
 
-            _logger.LogInformation("SearchDao inicializado con la cadena: {0}",
+            _logger.LogInformation("UserDao inicializado con la cadena: {0}",
                 new NpgsqlConnectionStringBuilder(_connection.ConnectionString) { Password = "***" });
+        }
+
+        private async Task EnsureConnectionOpenAsync()
+        {
+            if (_connection.State != System.Data.ConnectionState.Open)
+            {
+                await EnsureConnectionOpenAsync();
+            }
         }
 
         public async Task<(IEnumerable<BookSearchResultDto> Books, int TotalCount)> SearchBooksAsync(
@@ -34,7 +41,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
 
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     // Primero obtenemos el conteo total
                     var countQuery = @"
@@ -128,7 +135,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
 
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     // Primero obtenemos el conteo total
                     var countQuery = @"
@@ -208,7 +215,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
           
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     // Construir la consulta dinámicamente
                     var whereClauses = new List<string>();
@@ -320,5 +327,34 @@ namespace BooksAPIReviews.Models.DAO
                 throw;
             }
         }
+        #region IDisposable Support
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _connection?.Dispose();
+                }
+                _disposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_connection?.State == System.Data.ConnectionState.Open)
+            {
+                await _connection.CloseAsync();
+            }
+            Dispose(false);
+            GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }

@@ -8,18 +8,17 @@ using System.Threading.Tasks;
 
 namespace BooksAPIReviews.Models.DAO
 {
-    public class ReviewDao 
+    public class ReviewDao : IDisposable, IAsyncDisposable
     {
         private readonly NpgsqlConnection _connection;
         private readonly ILogger<ReviewDao> _logger;
+        private bool _disposed = false;
 
-        // Inyectamos la conexión directamente
-        public ReviewDao(NpgsqlConnection _connection, ILogger<ReviewDao> logger)
+        public ReviewDao(NpgsqlConnection connection, ILogger<ReviewDao> logger)
         {
-            _connection = _connection ?? throw new ArgumentNullException(nameof(_connection));
+            _connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            // Verificar la conexión
             if (string.IsNullOrEmpty(_connection.ConnectionString))
             {
                 _logger.LogError("La cadena de conexión está vacía");
@@ -30,6 +29,14 @@ namespace BooksAPIReviews.Models.DAO
                 new NpgsqlConnectionStringBuilder(_connection.ConnectionString) { Password = "***" });
         }
 
+        private async Task EnsureConnectionOpenAsync()
+        {
+            if (_connection.State != System.Data.ConnectionState.Open)
+            {
+                await EnsureConnectionOpenAsync();
+            }
+        }
+
         public async Task<IEnumerable<ReviewResponseDto>> GetAllAsync()
         {
             var reviews = new List<ReviewResponseDto>();
@@ -37,7 +44,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
 
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = @"
                         SELECT r.id, r.book_id, b.title as book_title, 
                                r.user_id, u.username as user_name, 
@@ -69,7 +76,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
  
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = @"
                         SELECT r.id, r.book_id, b.title as book_title, 
                                r.user_id, u.username as user_name, 
@@ -108,7 +115,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
         
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = @"
                         SELECT r.id, r.book_id, b.title as book_title, 
                                r.user_id, u.username as user_name, 
@@ -148,7 +155,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
         
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = @"
                         SELECT r.id, r.book_id, b.title as book_title, 
                                r.user_id, u.username as user_name, 
@@ -186,7 +193,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
              
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     using (var transaction = await _connection.BeginTransactionAsync())
                     {
@@ -268,7 +275,7 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     using (var transaction = await _connection.BeginTransactionAsync())
                     {
@@ -327,7 +334,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
            
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     using (var transaction = await _connection.BeginTransactionAsync())
                     {
@@ -390,7 +397,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
               
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = "SELECT COUNT(*) FROM reviews WHERE id = @id";
 
                     using (var command = new NpgsqlCommand(query, _connection))
@@ -413,7 +420,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
                
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = "SELECT COUNT(*) FROM reviews WHERE user_id = @userId AND book_id = @bookId";
 
                     using (var command = new NpgsqlCommand(query, _connection))
@@ -474,5 +481,35 @@ namespace BooksAPIReviews.Models.DAO
                 UpdatedAt = reader.IsDBNull(8) ? (DateTime?)null : reader.GetDateTime(8)
             };
         }
+
+        #region IDisposable Support
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _connection?.Dispose();
+                }
+                _disposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_connection?.State == System.Data.ConnectionState.Open)
+            {
+                await _connection.CloseAsync();
+            }
+            Dispose(false);
+            GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }

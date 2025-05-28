@@ -6,18 +6,17 @@ using System.Data;
 
 namespace BooksAPIReviews.Models.DAO
 {
-    public class CategoryDao 
+    public class CategoryDao : IDisposable, IAsyncDisposable
     {
         private readonly NpgsqlConnection _connection;
         private readonly ILogger<CategoryDao> _logger;
+        private bool _disposed = false;
 
-        // Inyectamos la conexión directamente
-        public CategoryDao(NpgsqlConnection _connection, ILogger<CategoryDao> logger)
+        public CategoryDao(NpgsqlConnection connection, ILogger<CategoryDao> logger)
         {
-            _connection = _connection ?? throw new ArgumentNullException(nameof(_connection));
+            _connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            // Verificar la conexión
             if (string.IsNullOrEmpty(_connection.ConnectionString))
             {
                 _logger.LogError("La cadena de conexión está vacía");
@@ -28,6 +27,14 @@ namespace BooksAPIReviews.Models.DAO
                 new NpgsqlConnectionStringBuilder(_connection.ConnectionString) { Password = "***" });
         }
 
+        private async Task EnsureConnectionOpenAsync()
+        {
+            if (_connection.State != System.Data.ConnectionState.Open)
+            {
+                await EnsureConnectionOpenAsync();
+            }
+        }
+
         public async Task<IEnumerable<CategoryDto>> GetAllAsync()
         {
             var categories = new List<CategoryDto>();
@@ -35,7 +42,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
             
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = @"
                         SELECT 
                             id, 
@@ -69,7 +76,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
               
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = @"
                         SELECT 
                             id, 
@@ -107,7 +114,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
                
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     var insertQuery = @"
                         INSERT INTO categories (
@@ -165,7 +172,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
               
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     var updateQuery = @"
                         UPDATE categories 
@@ -204,7 +211,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
               
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     var deleteQuery = "DELETE FROM categories WHERE id = @id";
 
@@ -233,7 +240,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
                
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = "SELECT COUNT(*) FROM categories WHERE id = @id";
 
                     using (var command = new NpgsqlCommand(query, _connection))
@@ -256,7 +263,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
                
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     var query = "SELECT COUNT(*) FROM categories WHERE name = @name";
                     if (excludeId.HasValue)
@@ -289,7 +296,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
                
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = "SELECT COUNT(*) FROM books WHERE category_id = @categoryId";
 
                     using (var command = new NpgsqlCommand(query, _connection))
@@ -318,5 +325,35 @@ namespace BooksAPIReviews.Models.DAO
                 UpdatedAt = reader.IsDBNull(4) ? null : reader.GetDateTime(4)
             };
         }
+
+        #region IDisposable Support
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _connection?.Dispose();
+                }
+                _disposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_connection?.State == System.Data.ConnectionState.Open)
+            {
+                await _connection.CloseAsync();
+            }
+            Dispose(false);
+            GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }

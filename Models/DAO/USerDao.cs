@@ -5,18 +5,17 @@ using System.Data;
 
 namespace BooksAPIReviews.Models.DAO
 {
-    public class UserDao 
+    public class UserDao : IDisposable, IAsyncDisposable
     {
         private readonly NpgsqlConnection _connection;
         private readonly ILogger<UserDao> _logger;
+        private bool _disposed = false;
 
-        // Inyectamos la conexión directamente
-        public UserDao(NpgsqlConnection _connection, ILogger<UserDao> logger)
+        public UserDao(NpgsqlConnection connection, ILogger<UserDao> logger)
         {
-            _connection = _connection ?? throw new ArgumentNullException(nameof(_connection));
+            _connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            // Verificar la conexión
             if (string.IsNullOrEmpty(_connection.ConnectionString))
             {
                 _logger.LogError("La cadena de conexión está vacía");
@@ -27,6 +26,14 @@ namespace BooksAPIReviews.Models.DAO
                 new NpgsqlConnectionStringBuilder(_connection.ConnectionString) { Password = "***" });
         }
 
+        private async Task EnsureConnectionOpenAsync()
+        {
+            if (_connection.State != System.Data.ConnectionState.Open)
+            {
+                await EnsureConnectionOpenAsync();
+            }
+        }
+
         public async Task<IEnumerable<UserResponseDto>> GetAllAsync()
         {
             var users = new List<UserResponseDto>();
@@ -34,7 +41,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
 
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = "SELECT id, email, username, first_name, last_name, created_at FROM users";
 
                     using (var command = new NpgsqlCommand(query, _connection))
@@ -60,7 +67,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
 
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = "SELECT id, email, username, first_name, last_name, created_at FROM users WHERE id = @id";
 
                     using (var command = new NpgsqlCommand(query, _connection))
@@ -90,7 +97,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
            
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     var insertQuery = @"
                         INSERT INTO users (email, username, first_name, last_name, password_hash, created_at)
@@ -154,7 +161,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
            
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = "SELECT COUNT(*) FROM users WHERE id = @id";
 
                     using (var command = new NpgsqlCommand(query, _connection))
@@ -177,7 +184,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
                
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = "SELECT COUNT(*) FROM users WHERE email = @email";
 
                     using (var command = new NpgsqlCommand(query, _connection))
@@ -200,7 +207,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
               
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
                     var query = "SELECT COUNT(*) FROM users WHERE username = @username";
 
                     using (var command = new NpgsqlCommand(query, _connection))
@@ -249,7 +256,7 @@ namespace BooksAPIReviews.Models.DAO
             try
             {
             
-                    await _connection.OpenAsync();
+                    await EnsureConnectionOpenAsync();
 
                     using (var command = new NpgsqlCommand(query, _connection))
                     {
@@ -332,5 +339,35 @@ namespace BooksAPIReviews.Models.DAO
         {
             public string PasswordHash { get; set; } = string.Empty;
         }
+
+        #region IDisposable Support
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _connection?.Dispose();
+                }
+                _disposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_connection?.State == System.Data.ConnectionState.Open)
+            {
+                await _connection.CloseAsync();
+            }
+            Dispose(false);
+            GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }
