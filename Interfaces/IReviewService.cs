@@ -8,7 +8,7 @@ namespace BooksAPIReviews.Services
     public interface IReviewService
     {
         Task<IEnumerable<ReviewResponseDto>> GetReviewsAsync();
-        Task<ReviewResponseDto> GetReviewByIdAsync(Guid id);
+        Task<List<ReviewResponseDto>> GetReviewByIdAsync(Guid id);
         Task<IEnumerable<ReviewResponseDto>> GetReviewsByBookIdAsync(Guid bookId);
         Task<IEnumerable<ReviewResponseDto>> GetReviewsByUserIdAsync(Guid userId);
         Task<ReviewResponseDto> CreateReviewAsync(ReviewCreateDto reviewDto);

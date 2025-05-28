@@ -39,7 +39,7 @@ namespace BooksAPIReviews.Services
             }
         }
 
-        public async Task<ReviewResponseDto> GetReviewByIdAsync(Guid id)
+        public async Task<List<ReviewResponseDto>> GetReviewByIdAsync(Guid id)
         {
             try
             {
@@ -158,21 +158,7 @@ namespace BooksAPIReviews.Services
                     throw new KeyNotFoundException($"No se encontró el usuario con ID: {reviewDto.UserId}");
                 }
 
-                // Validar que el usuario sea el dueño de la reseña
-                if (review.UserId != reviewDto.UserId)
-                {
-                    throw new UnauthorizedAccessException("No tienes permiso para modificar esta reseña");
-                }
 
-                // Validar que si cambia el libro, el usuario no tenga ya una reseña en el nuevo libro
-                if (review.BookId != reviewDto.BookId)
-                {
-                    var hasReviewed = await _reviewDao.UserHasReviewedBookAsync(reviewDto.UserId, reviewDto.BookId);
-                    if (hasReviewed)
-                    {
-                        throw new InvalidOperationException("Ya has realizado una reseña para este libro");
-                    }
-                }
 
                 return await _reviewDao.UpdateAsync(id, reviewDto);
             }

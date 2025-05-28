@@ -71,39 +71,45 @@ namespace BooksAPIReviews.Models.DAO
             }
         }
 
-        public async Task<ReviewResponseDto> GetByIdAsync(Guid id)
+        public async Task<List<ReviewResponseDto>> GetByIdAsync(Guid id)
         {
+            var reviews = new List<ReviewResponseDto>();
+
             try
             {
- 
-                    await EnsureConnectionOpenAsync();
-                    var query = @"
-                        SELECT r.id, r.book_id, b.title as book_title, 
-                               r.user_id, u.username as user_name, 
-                               r.rating, r.comment, r.created_at, r.updated_at
-                        FROM reviews r
-                        JOIN books b ON r.book_id = b.id
-                        JOIN users u ON r.user_id = u.id
-                        WHERE b.id = @id";
+                await EnsureConnectionOpenAsync();
+                var query = @"
+                    SELECT r.id, r.book_id, b.title as book_title, 
+                    r.user_id, u.username as user_name, 
+                    r.rating, r.comment, r.created_at, r.updated_at
+                    FROM reviews r
+                    JOIN books b ON r.book_id = b.id
+                    JOIN users u ON r.user_id = u.id
+                    WHERE b.id = @id
+                    ORDER BY r.created_at DESC";  
 
-                    using (var command = new NpgsqlCommand(query, _connection))
+                using (var command = new NpgsqlCommand(query, _connection))
+                {
+                    command.Parameters.AddWithValue("id", id);
+
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        command.Parameters.AddWithValue("id", id);
-
-                        using (var reader = await command.ExecuteReaderAsync())
+                        while (await reader.ReadAsync())
                         {
-                            if (await reader.ReadAsync())
+                            var review = MapToReviewResponse(reader);
+                            if (review != null)
                             {
-                                return MapToReviewResponse(reader);
+                                reviews.Add(review);
                             }
                         }
                     }
-                
-                return null;
+                }
+
+                return reviews;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al obtener la reseña con ID: {id}");
+                _logger.LogError(ex, $"Error al obtener las reseñas para el libro con ID: {id}");
                 throw;
             }
         }
