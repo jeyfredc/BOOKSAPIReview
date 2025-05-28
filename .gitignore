@@ -1,0 +1,98 @@
+# Archivos de compilación
+bin/
+obj/
+
+# Archivos de usuario
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Archivos de VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Archivos de Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Archivos de ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# Archivos de Rider
+.idea/
+*.sln.iml
+
+# Archivos de paquetes NuGet
+*.nupkg
+*.nupkg.metadata
+*.nupkg.sha512
+*.nupkg.targets
+NuGet.config
+packages/
+
+# Archivos de publicación
+publish/
+
+# Archivos de configuración local
+appsettings.Development.json
+appsettings.Local.json
+*.local.json
+*.local.*.json
+
+# Archivos de entorno local
+.env
+*.env
+.env.local
+*.env.local
+
+# Archivos de depuración
+*.log
+*.log.*
+*.pdb
+*.dll
+*.exe
+
+# Archivos de caché
+.cache/
+
+# Archivos de migraciones de EF Core (si usas migraciones)
+Migrations/
+
+# Archivos de cobertura de código
+coverage/
+*.coverage
+*.coverage.*
+
+# Archivos de Docker
+.dockerignore
+docker-compose.override.yml
+
+# Archivos de Vercel
+.vercel/
+
+# Archivos de configuración de IDE
+.idea/
+.fleet/
+*.swp
+*.swo
+
+# Archivos temporales
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Archivos de caché de npm (si usas npm para algo)
+node_modules/
+
+# Archivos de paquetes de frontend (si tienes frontend integrado)
+wwwroot/lib/
