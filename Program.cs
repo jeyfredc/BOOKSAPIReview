@@ -9,33 +9,46 @@ using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Obtener la cadena de conexión de las variables de entorno
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
+// 1. Configurar configuración
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
 
-// 2. Si no está en las variables de entorno, usa la de appsettings.json
-if (string.IsNullOrEmpty(connectionString))
+// 2. Obtener la cadena de conexión
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
+                      Environment.GetEnvironmentVariable("DATABASE_URL");
+
+// 3. Si es una URL de Railway, formatearla
+if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
 {
-    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    var uri = new Uri(connectionString);
+    var userInfo = uri.UserInfo.Split(':');
+    connectionString =
+        $"Server={uri.Host};" +
+        $"Port={uri.Port};" +
+        $"Database={uri.AbsolutePath.TrimStart('/')};" +
+        $"User Id={userInfo[0]};" +
+        $"Password={userInfo[1]};" +
+        "Ssl Mode=Require;Trust Server Certificate=true;";
 }
 
-// 3. Validar que tengamos una cadena de conexión
+// 4. Validar que tengamos una cadena de conexión
 if (string.IsNullOrEmpty(connectionString))
 {
     throw new InvalidOperationException("No se ha configurado la cadena de conexión a la base de datos.");
 }
 
-// 4. Registrar la conexión usando la cadena obtenida
+// 5. Registrar la conexión
 builder.Services.AddScoped(_ => new NpgsqlConnection(connectionString));
 
-// 5. Configurar servicios
+// 6. Configurar servicios
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "BooksAPIReviews", Version = "v1" }));
 
-// Registrar servicios personalizados
+// 7. Registrar servicios personalizados
 builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<BookDao>();
-// ... (tus otros servicios)
 
 var app = builder.Build();
 

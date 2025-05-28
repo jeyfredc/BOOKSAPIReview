@@ -8,12 +8,13 @@ namespace BooksAPIReviews.Models.DAO
 {
     public class BookDao 
     {
-        private readonly IConfiguration _configuration;
+        private readonly string _connectionString;
         private readonly ILogger<BookDao> _logger;
 
         public BookDao(IConfiguration configuration, ILogger<BookDao> logger)
         {
-            _configuration = configuration;
+            _connectionString = configuration.GetConnectionString("DefaultConnection") ??
+                              Environment.GetEnvironmentVariable("DATABASE_URL");
             _logger = logger;
         }
 
@@ -23,22 +24,22 @@ namespace BooksAPIReviews.Models.DAO
 
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var connection = new NpgsqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     var query = @"
-                SELECT 
-                    id, 
-                    title, 
-                    author, 
-                    description, 
-                    cover_image_url, 
-                    published_date, 
-                    average_rating,  -- Sin conversión a texto
-                    review_count, 
-                    created_at, 
-                    updated_at
-                FROM books";
+                    SELECT 
+                        id, 
+                        title, 
+                        author, 
+                        description, 
+                        cover_image_url, 
+                        published_date, 
+                        average_rating, 
+                        review_count, 
+                        created_at, 
+                        updated_at
+                    FROM books";
 
                     using (var command = new NpgsqlCommand(query, connection))
                     using (var reader = await command.ExecuteReaderAsync())
@@ -53,7 +54,7 @@ namespace BooksAPIReviews.Models.DAO
                                 Description = reader.IsDBNull(3) ? null : reader.GetString(3),
                                 CoverImageUrl = reader.IsDBNull(4) ? null : reader.GetString(4),
                                 PublishedDate = reader.IsDBNull(5) ? (DateTime?)null : reader.GetDateTime(5),
-                                AverageRating = reader.IsDBNull(6) ? 0m : reader.GetDecimal(6),  // Lee como decimal
+                                AverageRating = reader.GetDecimal(6),
                                 ReviewCount = reader.GetInt32(7),
                                 CreatedAt = reader.GetDateTime(8),
                                 UpdatedAt = reader.GetDateTime(9)
@@ -65,7 +66,8 @@ namespace BooksAPIReviews.Models.DAO
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener los libros");
+                _logger.LogError(ex, "Error al obtener los libros. ConnectionString: {0}",
+                    _connectionString?.Substring(0, Math.Min(20, _connectionString.Length)) + "...");
                 throw;
             }
         }
@@ -74,7 +76,7 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var connection = new NpgsqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     var query = @"
@@ -110,7 +112,7 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var connection = new NpgsqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
 
@@ -171,8 +173,8 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
+                    using (var connection = new NpgsqlConnection(_connectionString))
+                    {
                     await connection.OpenAsync();
 
                     var query = @"
@@ -214,7 +216,7 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var connection = new NpgsqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     var query = "DELETE FROM books WHERE id = @id";
@@ -238,7 +240,7 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var connection = new NpgsqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     var query = "SELECT COUNT(*) FROM books WHERE id = @id";
@@ -262,7 +264,7 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var connection = new NpgsqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     var query = "SELECT COUNT(*) FROM books WHERE LOWER(title) = LOWER(@title)";
