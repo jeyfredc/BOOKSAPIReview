@@ -47,7 +47,7 @@ namespace BooksAPIReviews.Models.DAO
 
                 var query = @"
                 SELECT 
-                    id, 
+                    id as book_id, 
                     title, 
                     author, 
                     description, 
