@@ -111,11 +111,13 @@ namespace BooksAPIReviews.Models.DAO
 
                 var query = @"
                     SELECT 
-                        id, title, author, description, cover_image_url, 
-                        published_date, category, average_rating, 
-                        review_count, created_at, updated_at 
-                    FROM books 
-                    WHERE id = @id";
+                    b.id as book_id, title, author, description, cover_image_url, 
+                    published_date, category, average_rating, 
+                    review_count, b.created_at, b.updated_at ,
+                    r.user_id as user_id , r.id as review_id
+                    FROM books b
+                    inner join reviews r on b.id = r.book_id
+                    WHERE b.id = @id";
 
                 using (var command = new NpgsqlCommand(query, _connection))
                 {
@@ -127,7 +129,7 @@ namespace BooksAPIReviews.Models.DAO
                         {
                             return new BookResponseDto
                             {
-                                Id = reader.GetGuid(0),
+                                Book_Id = reader.GetGuid(0),
                                 Title = reader.GetString(1),
                                 Author = reader.GetString(2),
                                 Description = reader.IsDBNull(3) ? null : reader.GetString(3),
@@ -137,7 +139,9 @@ namespace BooksAPIReviews.Models.DAO
                                 AverageRating = reader.GetDecimal(7),
                                 ReviewCount = reader.GetInt32(8),
                                 CreatedAt = reader.GetDateTime(9),
-                                UpdatedAt = reader.IsDBNull(10) ? (DateTime?)null : reader.GetDateTime(10)
+                                UpdatedAt = reader.IsDBNull(10) ? (DateTime?)null : reader.GetDateTime(10),
+                                User_Id = reader.GetString(11),
+                                Review_Id = reader.GetString(12),
                             };
                         }
                     }

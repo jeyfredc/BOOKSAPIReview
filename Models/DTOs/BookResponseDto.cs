@@ -2,7 +2,7 @@
 {
     public class BookResponseDto
     {
-        public Guid Id { get; set; }
+        public Guid Book_Id { get; set; }
         public string Title { get; set; }
         public string Author { get; set; }
         public string Description { get; set; }
@@ -13,5 +13,9 @@
         public int ReviewCount { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+
+        public String User_Id { get; set; }
+
+        public string Review_Id { get; set; }
     }
 }
