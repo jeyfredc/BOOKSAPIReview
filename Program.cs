@@ -9,7 +9,7 @@ using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Obtener la cadena de conexión de la variable de entorno
+// 1. Obtener la cadena de conexión
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
 
 // 2. Si no está en las variables de entorno, usa la de appsettings.json
@@ -25,11 +25,20 @@ if (string.IsNullOrEmpty(connectionString))
 }
 
 // 4. Registrar la conexión
-builder.Services.AddScoped(_ =>
+builder.Services.AddScoped<NpgsqlConnection>(_ =>
 {
-    var conn = new NpgsqlConnection(connectionString);
-    conn.Open(); // Abrir la conexión al crearla
-    return conn;
+    try
+    {
+        Console.WriteLine($"Cadena de conexión: {connectionString}");
+        var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        return conn;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error al crear la conexión: {ex.Message}");
+        throw;
+    }
 });
 
 // 5. Configurar servicios
@@ -54,21 +63,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
-
-// Verificar la conexión al inicio
-using (var scope = app.Services.CreateScope())
-{
-    try
-    {
-        var db = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
-        Console.WriteLine("Conexión a la base de datos establecida correctamente");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error al conectar a la base de datos: {ex.Message}");
-        throw;
-    }
-}
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 app.Run($"http://0.0.0.0:{port}");
