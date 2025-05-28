@@ -22,9 +22,9 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
 
                     // Primero obtenemos el conteo total
                     var countQuery = @"
@@ -37,7 +37,7 @@ namespace BooksAPIReviews.Models.DAO
                             category ILIKE @searchTerm";
 
                     int totalCount;
-                    using (var countCommand = new NpgsqlCommand(countQuery, connection))
+                    using (var countCommand = new NpgsqlCommand(countQuery, _connection))
                     {
                         countCommand.Parameters.AddWithValue("searchTerm", $"%{searchTerm}%");
                         totalCount = Convert.ToInt32(await countCommand.ExecuteScalarAsync() ?? 0);
@@ -76,7 +76,7 @@ namespace BooksAPIReviews.Models.DAO
                         LIMIT @pageSize OFFSET @offset";
 
                     var books = new List<BookSearchResultDto>();
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("searchTerm", $"%{searchTerm}%");
                         command.Parameters.AddWithValue("pageSize", pageSize);
@@ -117,9 +117,9 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
 
                     // Primero obtenemos el conteo total
                     var countQuery = @"
@@ -128,7 +128,7 @@ namespace BooksAPIReviews.Models.DAO
                         WHERE category = @category";
 
                     int totalCount;
-                    using (var countCommand = new NpgsqlCommand(countQuery, connection))
+                    using (var countCommand = new NpgsqlCommand(countQuery, _connection))
                     {
                         countCommand.Parameters.AddWithValue("category", category);
                         totalCount = Convert.ToInt32(await countCommand.ExecuteScalarAsync() ?? 0);
@@ -157,7 +157,7 @@ namespace BooksAPIReviews.Models.DAO
                         LIMIT @pageSize OFFSET @offset";
 
                     var books = new List<BookSearchResultDto>();
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("category", category);
                         command.Parameters.AddWithValue("pageSize", pageSize);
@@ -198,9 +198,9 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
 
                     // Construir la consulta dinámicamente
                     var whereClauses = new List<string>();
@@ -237,7 +237,7 @@ namespace BooksAPIReviews.Models.DAO
                 {whereClause}";
 
                     int totalCount;
-                    using (var countCommand = new NpgsqlCommand(countQuery, connection))
+                    using (var countCommand = new NpgsqlCommand(countQuery, _connection))
                     {
                         // Agregar parámetros al comando
                         foreach (var param in parameters)
@@ -276,7 +276,7 @@ namespace BooksAPIReviews.Models.DAO
                     parameters.Add(new NpgsqlParameter("offset", (page - 1) * pageSize));
 
                     var reviews = new List<ReviewSearchResultDto>();
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         // Agregar parámetros al comando
                         foreach (var param in parameters)

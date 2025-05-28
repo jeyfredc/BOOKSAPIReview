@@ -25,9 +25,9 @@ namespace BooksAPIReviews.Models.DAO
 
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
                     var query = @"
                         SELECT r.id, r.book_id, b.title as book_title, 
                                r.user_id, u.username as user_name, 
@@ -36,7 +36,7 @@ namespace BooksAPIReviews.Models.DAO
                         JOIN books b ON r.book_id = b.id
                         JOIN users u ON r.user_id = u.id";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
@@ -58,9 +58,9 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
                     var query = @"
                         SELECT r.id, r.book_id, b.title as book_title, 
                                r.user_id, u.username as user_name, 
@@ -70,7 +70,7 @@ namespace BooksAPIReviews.Models.DAO
                         JOIN users u ON r.user_id = u.id
                         WHERE r.id = @id";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
 
@@ -98,9 +98,9 @@ namespace BooksAPIReviews.Models.DAO
 
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
                     var query = @"
                         SELECT r.id, r.book_id, b.title as book_title, 
                                r.user_id, u.username as user_name, 
@@ -111,7 +111,7 @@ namespace BooksAPIReviews.Models.DAO
                         WHERE r.book_id = @bookId
                         ORDER BY r.created_at DESC";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("bookId", bookId);
 
@@ -139,9 +139,9 @@ namespace BooksAPIReviews.Models.DAO
 
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
                     var query = @"
                         SELECT r.id, r.book_id, b.title as book_title, 
                                r.user_id, u.username as user_name, 
@@ -152,7 +152,7 @@ namespace BooksAPIReviews.Models.DAO
                         WHERE r.user_id = @userId
                         ORDER BY r.created_at DESC";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("userId", userId);
 
@@ -178,11 +178,11 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
 
-                    using (var transaction = await connection.BeginTransactionAsync())
+                    using (var transaction = await _connection.BeginTransactionAsync())
                     {
                         try
                         {
@@ -203,7 +203,7 @@ namespace BooksAPIReviews.Models.DAO
                             DateTime createdAt;
                             DateTime? updatedAt;
 
-                            using (var command = new NpgsqlCommand(insertQuery, connection, transaction))
+                            using (var command = new NpgsqlCommand(insertQuery, _connection, transaction))
                             {
                                 command.Parameters.AddWithValue("bookId", reviewDto.BookId);
                                 command.Parameters.AddWithValue("userId", reviewDto.UserId);
@@ -226,7 +226,7 @@ namespace BooksAPIReviews.Models.DAO
                             }
 
                             // 3. Ahora que el DataReader está cerrado, podemos ejecutar otra consulta
-                            await UpdateBookRatingAsync(connection, transaction, reviewDto.BookId);
+                            await UpdateBookRatingAsync(_connection, transaction, reviewDto.BookId);
 
                             // 4. Confirmar la transacción
                             await transaction.CommitAsync();
@@ -262,11 +262,11 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
 
-                    using (var transaction = await connection.BeginTransactionAsync())
+                    using (var transaction = await _connection.BeginTransactionAsync())
                     {
                         try
                         {
@@ -280,7 +280,7 @@ namespace BooksAPIReviews.Models.DAO
                                 WHERE id = @id
                                 RETURNING book_id";
 
-                            using (var command = new NpgsqlCommand(query, connection, transaction))
+                            using (var command = new NpgsqlCommand(query, _connection, transaction))
                             {
                                 command.Parameters.AddWithValue("id", id);
                                 command.Parameters.AddWithValue("rating", reviewDto.Rating);
@@ -294,7 +294,7 @@ namespace BooksAPIReviews.Models.DAO
                                         var bookId = reader.GetGuid(0);
 
                                         // 2. Actualizar el promedio de calificaciones del libro
-                                        await UpdateBookRatingAsync(connection, transaction, bookId);
+                                        await UpdateBookRatingAsync(_connection, transaction, bookId);
 
                                         await transaction.CommitAsync();
                                         return true;
@@ -322,11 +322,11 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
 
-                    using (var transaction = await connection.BeginTransactionAsync())
+                    using (var transaction = await _connection.BeginTransactionAsync())
                     {
                         try
                         {
@@ -334,7 +334,7 @@ namespace BooksAPIReviews.Models.DAO
                             var bookIdQuery = "SELECT book_id FROM reviews WHERE id = @id";
                             Guid bookId;
 
-                            using (var command = new NpgsqlCommand(bookIdQuery, connection, transaction))
+                            using (var command = new NpgsqlCommand(bookIdQuery, _connection, transaction))
                             {
                                 command.Parameters.AddWithValue("id", id);
                                 var result = await command.ExecuteScalarAsync();
@@ -350,7 +350,7 @@ namespace BooksAPIReviews.Models.DAO
                             // 2. Eliminar la reseña
                             var deleteQuery = "DELETE FROM reviews WHERE id = @id";
 
-                            using (var command = new NpgsqlCommand(deleteQuery, connection, transaction))
+                            using (var command = new NpgsqlCommand(deleteQuery, _connection, transaction))
                             {
                                 command.Parameters.AddWithValue("id", id);
                                 int rowsAffected = await command.ExecuteNonQueryAsync();
@@ -362,7 +362,7 @@ namespace BooksAPIReviews.Models.DAO
                             }
 
                             // 3. Actualizar el promedio de calificaciones del libro
-                            await UpdateBookRatingAsync(connection, transaction, bookId);
+                            await UpdateBookRatingAsync(_connection, transaction, bookId);
 
                             await transaction.CommitAsync();
                             return true;
@@ -386,12 +386,12 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
                     var query = "SELECT COUNT(*) FROM reviews WHERE id = @id";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
                         var count = (long)(await command.ExecuteScalarAsync() ?? 0);
@@ -410,12 +410,12 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
                     var query = "SELECT COUNT(*) FROM reviews WHERE user_id = @userId AND book_id = @bookId";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("userId", userId);
                         command.Parameters.AddWithValue("bookId", bookId);
@@ -431,7 +431,7 @@ namespace BooksAPIReviews.Models.DAO
             }
         }
 
-        private async Task UpdateBookRatingAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid bookId)
+        private async Task UpdateBookRatingAsync(NpgsqlConnection _connection, NpgsqlTransaction transaction, Guid bookId)
         {
             // Actualizar el promedio y el conteo de reseñas del libro
             var updateBookQuery = @"
@@ -450,7 +450,7 @@ namespace BooksAPIReviews.Models.DAO
                     updated_at = @updatedAt
                 WHERE id = @bookId";
 
-            using (var command = new NpgsqlCommand(updateBookQuery, connection, transaction))
+            using (var command = new NpgsqlCommand(updateBookQuery, _connection, transaction))
             {
                 command.Parameters.AddWithValue("bookId", bookId);
                 command.Parameters.AddWithValue("updatedAt", DateTime.UtcNow);

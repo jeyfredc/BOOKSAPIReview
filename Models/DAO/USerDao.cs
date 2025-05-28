@@ -7,13 +7,24 @@ namespace BooksAPIReviews.Models.DAO
 {
     public class UserDao 
     {
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<UserDao> _logger;
+        private readonly NpgsqlConnection _connection;
+        private readonly ILogger<BookDao> _logger;
 
-        public UserDao(IConfiguration configuration, ILogger<UserDao> logger)
+        // Inyectamos la conexión directamente
+        public UserDao(NpgsqlConnection _connection, ILogger<BookDao> logger)
         {
-            _configuration = configuration;
-            _logger = logger;
+            _connection = _connection ?? throw new ArgumentNullException(nameof(_connection));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            // Verificar la conexión
+            if (string.IsNullOrEmpty(_connection.ConnectionString))
+            {
+                _logger.LogError("La cadena de conexión está vacía");
+                throw new InvalidOperationException("La cadena de conexión no está configurada");
+            }
+
+            _logger.LogInformation("BookDao inicializado con la cadena: {0}",
+                new NpgsqlConnectionStringBuilder(_connection.ConnectionString) { Password = "***" });
         }
 
         public async Task<IEnumerable<UserResponseDto>> GetAllAsync()
@@ -22,12 +33,11 @@ namespace BooksAPIReviews.Models.DAO
 
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
-                    await connection.OpenAsync();
+
+                    await _connection.OpenAsync();
                     var query = "SELECT id, email, username, first_name, last_name, created_at FROM users";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
@@ -35,7 +45,7 @@ namespace BooksAPIReviews.Models.DAO
                             users.Add(MapToUserResponse(reader));
                         }
                     }
-                }
+                
                 return users;
             }
             catch (Exception ex)
@@ -49,12 +59,11 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
-                    await connection.OpenAsync();
+
+                    await _connection.OpenAsync();
                     var query = "SELECT id, email, username, first_name, last_name, created_at FROM users WHERE id = @id";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
 
@@ -66,7 +75,7 @@ namespace BooksAPIReviews.Models.DAO
                             }
                         }
                     }
-                }
+                
                 return null;
             }
             catch (Exception ex)
@@ -80,16 +89,15 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
-                    await connection.OpenAsync();
+           
+                    await _connection.OpenAsync();
 
                     var insertQuery = @"
                         INSERT INTO users (email, username, first_name, last_name, password_hash, created_at)
                         VALUES (@email, @username, @firstName, @lastName, @passwordHash, @createdAt)
                         RETURNING id, created_at";
 
-                    using (var command = new NpgsqlCommand(insertQuery, connection))
+                    using (var command = new NpgsqlCommand(insertQuery, _connection))
                     {
                         command.Parameters.AddWithValue("email", userDto.Email);
                         command.Parameters.AddWithValue("username", userDto.Username);
@@ -116,7 +124,7 @@ namespace BooksAPIReviews.Models.DAO
                                 };
                             }
                         }
-                    }
+                    
                 }
                 throw new Exception("No se pudo crear el usuario");
             }
@@ -145,18 +153,17 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
-                    await connection.OpenAsync();
+           
+                    await _connection.OpenAsync();
                     var query = "SELECT COUNT(*) FROM users WHERE id = @id";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
                         var count = (long)(await command.ExecuteScalarAsync() ?? 0);
                         return count > 0;
                     }
-                }
+                
             }
             catch (Exception ex)
             {
@@ -169,18 +176,17 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
-                    await connection.OpenAsync();
+               
+                    await _connection.OpenAsync();
                     var query = "SELECT COUNT(*) FROM users WHERE email = @email";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("email", email);
                         var count = (long)(await command.ExecuteScalarAsync() ?? 0);
                         return count > 0;
                     }
-                }
+                
             }
             catch (Exception ex)
             {
@@ -193,17 +199,16 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
-                    await connection.OpenAsync();
+              
+                    await _connection.OpenAsync();
                     var query = "SELECT COUNT(*) FROM users WHERE username = @username";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("username", username);
                         var count = (long)(await command.ExecuteScalarAsync() ?? 0);
                         return count > 0;
-                    }
+                    
                 }
             }
             catch (Exception ex)
@@ -243,11 +248,10 @@ namespace BooksAPIReviews.Models.DAO
 
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
-                    await connection.OpenAsync();
+            
+                    await _connection.OpenAsync();
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("usernameOrEmail", usernameOrEmail);
 
@@ -280,8 +284,8 @@ namespace BooksAPIReviews.Models.DAO
                                     };
                                 }
                             }
-                        }
-                    }
+                       }
+                    
                 }
                 return null;
             }

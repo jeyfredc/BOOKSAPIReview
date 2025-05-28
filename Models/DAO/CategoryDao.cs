@@ -23,9 +23,9 @@ namespace BooksAPIReviews.Models.DAO
 
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
                     var query = @"
                         SELECT 
                             id, 
@@ -36,7 +36,7 @@ namespace BooksAPIReviews.Models.DAO
                         FROM books
                         ORDER BY author";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
@@ -58,9 +58,9 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
                     var query = @"
                         SELECT 
                             id, 
@@ -71,7 +71,7 @@ namespace BooksAPIReviews.Models.DAO
                         FROM categories 
                         WHERE id = @id";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
 
@@ -97,9 +97,9 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
 
                     var insertQuery = @"
                         INSERT INTO categories (
@@ -114,7 +114,7 @@ namespace BooksAPIReviews.Models.DAO
                         )
                         RETURNING id, created_at, updated_at";
 
-                    using (var command = new NpgsqlCommand(insertQuery, connection))
+                    using (var command = new NpgsqlCommand(insertQuery, _connection))
                     {
                         var now = DateTime.UtcNow;
 
@@ -156,9 +156,9 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
 
                     var updateQuery = @"
                         UPDATE categories 
@@ -168,7 +168,7 @@ namespace BooksAPIReviews.Models.DAO
                             updated_at = @updatedAt
                         WHERE id = @id";
 
-                    using (var command = new NpgsqlCommand(updateQuery, connection))
+                    using (var command = new NpgsqlCommand(updateQuery, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
                         command.Parameters.AddWithValue("name", categoryDto.Name);
@@ -196,13 +196,13 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
 
                     var deleteQuery = "DELETE FROM categories WHERE id = @id";
 
-                    using (var command = new NpgsqlCommand(deleteQuery, connection))
+                    using (var command = new NpgsqlCommand(deleteQuery, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
                         int rowsAffected = await command.ExecuteNonQueryAsync();
@@ -226,12 +226,12 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
                     var query = "SELECT COUNT(*) FROM categories WHERE id = @id";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
                         var count = (long)(await command.ExecuteScalarAsync() ?? 0);
@@ -250,9 +250,9 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
 
                     var query = "SELECT COUNT(*) FROM categories WHERE name = @name";
                     if (excludeId.HasValue)
@@ -260,7 +260,7 @@ namespace BooksAPIReviews.Models.DAO
                         query += " AND id != @excludeId";
                     }
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("name", name);
                         if (excludeId.HasValue)
@@ -284,12 +284,12 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    await connection.OpenAsync();
+                    await _connection.OpenAsync();
                     var query = "SELECT COUNT(*) FROM books WHERE category_id = @categoryId";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("categoryId", categoryId);
                         var count = (long)(await command.ExecuteScalarAsync() ?? 0);

@@ -12,9 +12,9 @@ namespace BooksAPIReviews.Models.DAO
         private readonly ILogger<BookDao> _logger;
 
         // Inyectamos la conexión directamente
-        public BookDao(NpgsqlConnection connection, ILogger<BookDao> logger)
+        public BookDao(NpgsqlConnection _connection, ILogger<BookDao> logger)
         {
-            _connection = connection ?? throw new ArgumentNullException(nameof(connection));
+            _connection = _connection ?? throw new ArgumentNullException(nameof(_connection));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             // Verificar la conexión
