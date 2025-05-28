@@ -2,9 +2,12 @@ using BooksAPIReviews.Interfaces;
 using BooksAPIReviews.Models.DAO;
 using BooksAPIReviews.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using System;
 
@@ -37,18 +40,37 @@ if (string.IsNullOrEmpty(connectionString))
     throw new InvalidOperationException("No se pudo obtener la cadena de conexión de ninguna fuente.");
 }
 
-// 5. Configurar servicios
+// 5. Configurar Kestrel
+var httpPort = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+var httpsPort = Environment.GetEnvironmentVariable("HTTPS_PORT") ?? "443";
+
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(int.Parse(httpPort));
+    serverOptions.ListenAnyIP(int.Parse(httpsPort), listenOptions =>
+    {
+        listenOptions.UseHttps();
+    });
+});
+
+// 6. Configurar servicios
 ConfigureServices(builder.Services, connectionString);
 
 var app = builder.Build();
 
-// 6. Configurar el pipeline HTTP
+// 7. Configurar el pipeline HTTP
 ConfigurePipeline(app);
 
-// 7. Iniciar la aplicación
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-Console.WriteLine($"Iniciando aplicación en el puerto {port}");
-app.Run($"http://0.0.0.0:{port}");
+// 8. Iniciar la aplicación
+app.Urls.Clear();
+app.Urls.Add($"[http://0.0.0.0](http://0.0.0.0):{httpPort}");
+app.Urls.Add($"[https://0.0.0.0](https://0.0.0.0):{httpsPort}");
+
+Console.WriteLine($"Iniciando aplicación en:");
+Console.WriteLine($"- HTTP: [http://0.0.0.0](http://0.0.0.0):{httpPort}");
+Console.WriteLine($"- HTTPS: [https://0.0.0.0](https://0.0.0.0):{httpsPort}");
+
+app.Run();
 
 // Métodos auxiliares
 static string GetConnectionString(IConfiguration configuration, IHostEnvironment env)
@@ -131,7 +153,7 @@ static string ConvertPostgresUrlToConnectionString(string databaseUrl)
     catch (Exception ex)
     {
         Console.WriteLine($"Error al convertir la URL de la base de datos: {ex.Message}");
-        return databaseUrl; // Devuelve la cadena original si hay un error
+        return databaseUrl;
     }
 }
 
@@ -157,17 +179,7 @@ static string ObfuscateConnectionString(string connectionString)
 
 static void ConfigureServices(IServiceCollection services, string connectionString)
 {
-    // Registrar la conexión como Singleton
-    services.AddSingleton(_ =>
-    {
-        var conn = new NpgsqlConnection(connectionString);
-        conn.Open();
-        return conn;
-    });
-
-    // Configurar servicios de la aplicación
-    services.AddControllers();
-
+    // Configuración de CORS
     services.AddCors(options =>
     {
         options.AddPolicy("AllowAll",
@@ -176,7 +188,15 @@ static void ConfigureServices(IServiceCollection services, string connectionStri
                 .AllowAnyMethod()
                 .AllowAnyHeader());
     });
-    // Configurar Swagger
+
+    // Configuración de controladores
+    services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.PropertyNamingPolicy = null;
+        });
+
+    // Configuración de Swagger
     services.AddEndpointsApiExplorer();
     services.AddSwaggerGen(c =>
     {
@@ -186,6 +206,14 @@ static void ConfigureServices(IServiceCollection services, string connectionStri
             Version = "v1",
             Description = "API de reseñas de libros"
         });
+    });
+
+    // Configuración de la base de datos
+    services.AddSingleton(_ =>
+    {
+        var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        return conn;
     });
 
     // Registrar servicios personalizados
@@ -202,11 +230,15 @@ static void ConfigureServices(IServiceCollection services, string connectionStri
     services.AddScoped<ReviewDao>();
     services.AddScoped<SearchDao>();
     services.AddScoped<UserDao>();
+
+    // Configuración de autenticación (si es necesaria)
+    // services.AddAuthentication(...)
+    // services.AddAuthorization(...);
 }
 
 static void ConfigurePipeline(WebApplication app)
 {
-    // Configurar el entorno de desarrollo
+    // Configuración del entorno de desarrollo
     if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
     {
         app.UseDeveloperExceptionPage();
@@ -223,11 +255,29 @@ static void ConfigurePipeline(WebApplication app)
         app.UseHsts();
     }
 
-    // Configuración común para todos los entornos
-    app.UseHttpsRedirection();
+    // Configuración de redirección HTTPS
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseHttpsRedirection();
+    }
+    else
+    {
+        var httpsPort = Environment.GetEnvironmentVariable("HTTPS_PORT") ?? "443";
+        app.UseHttpsRedirection(new HttpsRedirectionOptions
+        {
+            HttpsPort = int.Parse(httpsPort)
+        });
+    }
+
+    // Configuración de headers de seguridad
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    });
+
     app.UseRouting();
 
-    // CORS debe estar después de UseRouting y antes de UseAuthorization
+    // Configuración de CORS
     app.UseCors("AllowAll");
 
     app.UseAuthorization();
