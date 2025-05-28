@@ -8,10 +8,10 @@ namespace BooksAPIReviews.Models.DAO
     public class UserDao 
     {
         private readonly NpgsqlConnection _connection;
-        private readonly ILogger<BookDao> _logger;
+        private readonly ILogger<UserDao> _logger;
 
         // Inyectamos la conexión directamente
-        public UserDao(NpgsqlConnection _connection, ILogger<BookDao> logger)
+        public UserDao(NpgsqlConnection _connection, ILogger<UserDao> logger)
         {
             _connection = _connection ?? throw new ArgumentNullException(nameof(_connection));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -23,7 +23,7 @@ namespace BooksAPIReviews.Models.DAO
                 throw new InvalidOperationException("La cadena de conexión no está configurada");
             }
 
-            _logger.LogInformation("BookDao inicializado con la cadena: {0}",
+            _logger.LogInformation("UserDao inicializado con la cadena: {0}",
                 new NpgsqlConnectionStringBuilder(_connection.ConnectionString) { Password = "***" });
         }
 
