@@ -8,15 +8,26 @@ namespace BooksAPIReviews.Models.DAO
 {
     public class BookDao 
     {
-        private readonly string _connectionString;
+        private readonly NpgsqlConnection _connection;
         private readonly ILogger<BookDao> _logger;
 
-        public BookDao(IConfiguration configuration, ILogger<BookDao> logger)
+        // Inyectamos la conexión directamente
+        public BookDao(NpgsqlConnection connection, ILogger<BookDao> logger)
         {
-            _connectionString = configuration.GetConnectionString("DefaultConnection") ??
-                              Environment.GetEnvironmentVariable("DATABASE_URL");
-            _logger = logger;
+            _connection = connection ?? throw new ArgumentNullException(nameof(connection));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            // Verificar la conexión
+            if (string.IsNullOrEmpty(_connection.ConnectionString))
+            {
+                _logger.LogError("La cadena de conexión está vacía");
+                throw new InvalidOperationException("La cadena de conexión no está configurada");
+            }
+
+            _logger.LogInformation("BookDao inicializado con la cadena: {0}",
+                new NpgsqlConnectionStringBuilder(_connection.ConnectionString) { Password = "***" });
         }
+
 
         public async Task<IEnumerable<BookResponseDto>> GetAllAsync()
         {
@@ -24,51 +35,54 @@ namespace BooksAPIReviews.Models.DAO
 
             try
             {
-                using (var connection = new NpgsqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-                    var query = @"
-                    SELECT 
-                        id, 
-                        title, 
-                        author, 
-                        description, 
-                        cover_image_url, 
-                        published_date, 
-                        average_rating, 
-                        review_count, 
-                        created_at, 
-                        updated_at
-                    FROM books";
+                await _connection.OpenAsync();
 
-                    using (var command = new NpgsqlCommand(query, connection))
-                    using (var reader = await command.ExecuteReaderAsync())
+                var query = @"
+                SELECT 
+                    id, 
+                    title, 
+                    author, 
+                    description, 
+                    cover_image_url, 
+                    published_date, 
+                    average_rating, 
+                    review_count, 
+                    created_at, 
+                    updated_at
+                FROM books";
+
+                using (var command = new NpgsqlCommand(query, _connection))
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
                     {
-                        while (await reader.ReadAsync())
+                        books.Add(new BookResponseDto
                         {
-                            books.Add(new BookResponseDto
-                            {
-                                Id = reader.GetGuid(0),
-                                Title = reader.GetString(1),
-                                Author = reader.GetString(2),
-                                Description = reader.IsDBNull(3) ? null : reader.GetString(3),
-                                CoverImageUrl = reader.IsDBNull(4) ? null : reader.GetString(4),
-                                PublishedDate = reader.IsDBNull(5) ? (DateTime?)null : reader.GetDateTime(5),
-                                AverageRating = reader.GetDecimal(6),
-                                ReviewCount = reader.GetInt32(7),
-                                CreatedAt = reader.GetDateTime(8),
-                                UpdatedAt = reader.GetDateTime(9)
-                            });
-                        }
+                            Id = reader.GetGuid(0),
+                            Title = reader.GetString(1),
+                            Author = reader.GetString(2),
+                            Description = reader.IsDBNull(3) ? null : reader.GetString(3),
+                            CoverImageUrl = reader.IsDBNull(4) ? null : reader.GetString(4),
+                            PublishedDate = reader.IsDBNull(5) ? (DateTime?)null : reader.GetDateTime(5),
+                            AverageRating = reader.GetDecimal(6),
+                            ReviewCount = reader.GetInt32(7),
+                            CreatedAt = reader.GetDateTime(8),
+                            UpdatedAt = reader.GetDateTime(9)
+                        });
                     }
                 }
+
                 return books;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al obtener los libros. ConnectionString: {0}",
-                    _connectionString?.Substring(0, Math.Min(20, _connectionString.Length)) + "...");
+                    _connection.ConnectionString?.Substring(0, Math.Min(30, _connection.ConnectionString.Length)) + "...");
                 throw;
+            }
+            finally
+            {
+                await _connection.CloseAsync();
             }
         }
 
@@ -76,9 +90,8 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
+               
+                    await _connection.OpenAsync();
                     var query = @"
                         SELECT id, title, author, description, cover_image_url, 
                                published_date, category_id, average_rating, 
@@ -86,7 +99,7 @@ namespace BooksAPIReviews.Models.DAO
                         FROM books 
                         WHERE id = @id";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
 
@@ -98,7 +111,7 @@ namespace BooksAPIReviews.Models.DAO
                             }
                         }
                     }
-                }
+                
                 return null;
             }
             catch (Exception ex)
@@ -112,9 +125,8 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
+
+                    await _connection.OpenAsync();
 
                     var insertQuery = @"
                             INSERT INTO books (
@@ -128,7 +140,7 @@ namespace BooksAPIReviews.Models.DAO
                             RETURNING 
                                 id, average_rating, review_count, created_at, updated_at";
 
-                    using (var command = new NpgsqlCommand(insertQuery, connection))
+                    using (var command = new NpgsqlCommand(insertQuery, _connection))
                     {
                         command.Parameters.AddWithValue("title", bookDto.Title);
                         command.Parameters.AddWithValue("author", bookDto.Author);
@@ -159,7 +171,7 @@ namespace BooksAPIReviews.Models.DAO
                             }
                         }
                     }
-                }
+                
                 throw new Exception("No se pudo crear el libro");
             }
             catch (Exception ex)
@@ -173,9 +185,8 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                    using (var connection = new NpgsqlConnection(_connectionString))
-                    {
-                    await connection.OpenAsync();
+
+                    await _connection.OpenAsync();
 
                     var query = @"
                         UPDATE books 
@@ -189,7 +200,7 @@ namespace BooksAPIReviews.Models.DAO
                             updated_at = @updatedAt
                         WHERE id = @id";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
                         command.Parameters.AddWithValue("title", bookDto.Title);
@@ -203,7 +214,7 @@ namespace BooksAPIReviews.Models.DAO
                         int rowsAffected = await command.ExecuteNonQueryAsync();
                         return rowsAffected > 0;
                     }
-                }
+                
             }
             catch (Exception ex)
             {
@@ -216,18 +227,17 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
+      
+                    await _connection.OpenAsync();
                     var query = "DELETE FROM books WHERE id = @id";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
                         int rowsAffected = await command.ExecuteNonQueryAsync();
                         return rowsAffected > 0;
                     }
-                }
+                
             }
             catch (Exception ex)
             {
@@ -240,18 +250,17 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
+
+                    await _connection.OpenAsync();
                     var query = "SELECT COUNT(*) FROM books WHERE id = @id";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("id", id);
                         var count = (long)(await command.ExecuteScalarAsync() ?? 0);
                         return count > 0;
                     }
-                }
+                
             }
             catch (Exception ex)
             {
@@ -264,18 +273,17 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var connection = new NpgsqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
+       
+                    await _connection.OpenAsync();
                     var query = "SELECT COUNT(*) FROM books WHERE LOWER(title) = LOWER(@title)";
 
-                    using (var command = new NpgsqlCommand(query, connection))
+                    using (var command = new NpgsqlCommand(query, _connection))
                     {
                         command.Parameters.AddWithValue("title", title);
                         var count = (long)(await command.ExecuteScalarAsync() ?? 0);
                         return count > 0;
                     }
-                }
+                
             }
             catch (Exception ex)
             {
