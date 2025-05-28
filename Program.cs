@@ -9,7 +9,7 @@ using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Obtener la cadena de conexión
+// 1. Obtener la cadena de conexión de las variables de entorno
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
 
 // 2. Si no está en las variables de entorno, usa la de appsettings.json
@@ -24,22 +24,8 @@ if (string.IsNullOrEmpty(connectionString))
     throw new InvalidOperationException("No se ha configurado la cadena de conexión a la base de datos.");
 }
 
-// 4. Registrar la conexión
-builder.Services.AddScoped<NpgsqlConnection>(_ =>
-{
-    try
-    {
-        Console.WriteLine($"Cadena de conexión: {connectionString}");
-        var conn = new NpgsqlConnection(connectionString);
-        conn.Open();
-        return conn;
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error al crear la conexión: {ex.Message}");
-        throw;
-    }
-});
+// 4. Registrar la conexión usando la cadena obtenida
+builder.Services.AddScoped(_ => new NpgsqlConnection(connectionString));
 
 // 5. Configurar servicios
 builder.Services.AddControllers();
