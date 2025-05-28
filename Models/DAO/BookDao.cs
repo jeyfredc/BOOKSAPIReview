@@ -6,26 +6,70 @@ using System.Threading.Tasks;
 
 namespace BooksAPIReviews.Models.DAO
 {
-    public class BookDao 
+    public class BookDao : IDisposable, IAsyncDisposable
     {
         private readonly NpgsqlConnection _connection;
         private readonly ILogger<BookDao> _logger;
+        private bool _disposed = false;
+
 
         // Inyectamos la conexión directamente
-        public BookDao(NpgsqlConnection _connection, ILogger<BookDao> logger)
+        public BookDao(IConfiguration configuration, ILogger<BookDao> logger)
         {
-            _connection = _connection ?? throw new ArgumentNullException(nameof(_connection));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            // Verificar la conexión
-            if (string.IsNullOrEmpty(_connection.ConnectionString))
-            {
-                _logger.LogError("La cadena de conexión está vacía");
-                throw new InvalidOperationException("La cadena de conexión no está configurada");
-            }
+            var connectionString = configuration.GetConnectionString("DefaultConnection") ??
+                throw new ArgumentNullException("No se encontró la cadena de conexión en la configuración");
 
-            _logger.LogInformation("BookDao inicializado con la cadena: {0}",
-                new NpgsqlConnectionStringBuilder(_connection.ConnectionString) { Password = "***" });
+            _connection = new NpgsqlConnection(connectionString);
+
+            _logger.LogInformation("BookDao inicializado");
+        }
+
+        // Método para obtener una conexión abierta
+        private async Task<NpgsqlConnection> GetOpenConnectionAsync()
+        {
+            if (_connection.State != System.Data.ConnectionState.Open)
+            {
+                await _connection.OpenAsync();
+            }
+            return _connection;
+        }
+
+        // Implementación de IDisposable
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        // Implementación de IAsyncDisposable
+        public async ValueTask DisposeAsync()
+        {
+            await DisposeAsyncCore();
+            Dispose(false);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _connection?.Dispose();
+                }
+                _disposed = true;
+            }
+        }
+
+        protected virtual async ValueTask DisposeAsyncCore()
+        {
+            if (!_disposed && _connection != null)
+            {
+                await _connection.DisposeAsync().ConfigureAwait(false);
+                _disposed = true;
+            }
         }
 
 
