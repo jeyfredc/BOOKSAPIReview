@@ -84,7 +84,7 @@ namespace BooksAPIReviews.Models.DAO
                         FROM reviews r
                         JOIN books b ON r.book_id = b.id
                         JOIN users u ON r.user_id = u.id
-                        WHERE r.id = @id";
+                        WHERE b.id = @id";
 
                     using (var command = new NpgsqlCommand(query, _connection))
                     {
