@@ -9,51 +9,45 @@ using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Configurar configuración
-builder.Configuration
-    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-    .AddEnvironmentVariables();
-
-// 2. Obtener la cadena de conexión
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
-                      Environment.GetEnvironmentVariable("DATABASE_URL");
-
-// 3. Si es una URL de Railway, formatearla
-if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+// 1. Mostrar todas las variables de entorno para diagnóstico
+Console.WriteLine("=== VARIABLES DE ENTORNO ===");
+foreach (var envVar in Environment.GetEnvironmentVariables().Keys)
 {
-    var uri = new Uri(connectionString);
-    var userInfo = uri.UserInfo.Split(':');
-    connectionString =
-        $"Server={uri.Host};" +
-        $"Port={uri.Port};" +
-        $"Database={uri.AbsolutePath.TrimStart('/')};" +
-        $"User Id={userInfo[0]};" +
-        $"Password={userInfo[1]};" +
-        "Ssl Mode=Require;Trust Server Certificate=true;";
+    Console.WriteLine($"{envVar} = {Environment.GetEnvironmentVariable(envVar.ToString())}");
 }
 
-// 4. Validar que tengamos una cadena de conexión
+// 2. Obtener la cadena de conexión de diferentes fuentes
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
+                      Environment.GetEnvironmentVariable("DATABASE_URL") ??
+                      "Server=nozomi.proxy.rlwy.net;Port=57705;Database=railway;User Id=postgres;Password=RwlvkenbtwHObjzUAZjPywkmLIiYXZut;Ssl Mode=Require;Trust Server Certificate=true;";
+
+Console.WriteLine($"\n=== CADENA DE CONEXIÓN UTILIZADA ===");
+Console.WriteLine(connectionString);
+
 if (string.IsNullOrEmpty(connectionString))
 {
-    throw new InvalidOperationException("No se ha configurado la cadena de conexión a la base de datos.");
+    Console.WriteLine("\n=== ERROR: No se pudo obtener la cadena de conexión ===");
+    Console.WriteLine("Por favor, configura la variable de entorno DATABASE_URL o ConnectionStrings__DefaultConnection");
+    Console.WriteLine("Ejemplo para Railway: DATABASE_URL=postgresql://usuario:contraseña@host:puerto/nombre_bd");
+    Environment.Exit(1);
 }
 
-// 5. Registrar la conexión
+// 3. Registrar la conexión
 builder.Services.AddScoped(_ => new NpgsqlConnection(connectionString));
 
-// 6. Configurar servicios
+// 4. Configurar servicios
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "BooksAPIReviews", Version = "v1" }));
 
-// 7. Registrar servicios personalizados
+// 5. Registrar servicios personalizados
 builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<BookDao>();
 
 var app = builder.Build();
 
-// Configurar el pipeline de la aplicación
-if (app.Environment.IsDevelopment())
+// 6. Configurar el pipeline de la aplicación
+if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Railway")
 {
     app.UseSwagger();
     app.UseSwaggerUI();
