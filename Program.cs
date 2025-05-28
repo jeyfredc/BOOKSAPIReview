@@ -168,6 +168,14 @@ static void ConfigureServices(IServiceCollection services, string connectionStri
     // Configurar servicios de la aplicación
     services.AddControllers();
 
+    services.AddCors(options =>
+    {
+        options.AddPolicy("AllowAll",
+            builder => builder
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader());
+    });
     // Configurar Swagger
     services.AddEndpointsApiExplorer();
     services.AddSwaggerGen(c =>
@@ -218,14 +226,11 @@ static void ConfigurePipeline(WebApplication app)
     // Configuración común para todos los entornos
     app.UseHttpsRedirection();
     app.UseRouting();
-    app.UseAuthorization();
 
-    // Configurar CORS
-    app.UseCors(policy =>
-        policy.WithOrigins(
-                "*")
-              .AllowAnyMethod()
-              .AllowAnyHeader());
+    // CORS debe estar después de UseRouting y antes de UseAuthorization
+    app.UseCors("AllowAll");
+
+    app.UseAuthorization();
 
     // Configurar endpoints
     app.UseEndpoints(endpoints =>
