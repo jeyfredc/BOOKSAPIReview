@@ -69,7 +69,19 @@ builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "BooksAPI
 
 // 8. Registrar servicios personalizados
 builder.Services.AddScoped<IBookService, BookService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<ISearchService, SearchService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
 builder.Services.AddScoped<BookDao>();
+builder.Services.AddScoped<CategoryDao>();
+builder.Services.AddScoped<ReviewDao>();
+builder.Services.AddScoped<SearchDao>();
+builder.Services.AddScoped<UserDao>();
+
+
 
 var app = builder.Build();
 
