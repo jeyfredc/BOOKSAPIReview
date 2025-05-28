@@ -21,15 +21,27 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
-// 3. Obtener configuración de la base de datos
-var connectionString = GetConnectionString(builder.Configuration, builder.Environment);
+// 3. Obtener y validar la cadena de conexión
+string connectionString = GetConnectionString(builder.Configuration, builder.Environment);
 
-// 4. Registrar servicios
+// 4. Validar que tengamos una cadena de conexión
+if (string.IsNullOrEmpty(connectionString))
+{
+    Console.WriteLine("=== ERROR: No se pudo obtener la cadena de conexión ===");
+    Console.WriteLine("Variables de entorno disponibles:");
+    foreach (var envVar in Environment.GetEnvironmentVariables().Keys)
+    {
+        Console.WriteLine($"{envVar} = {Environment.GetEnvironmentVariable(envVar.ToString())}");
+    }
+    throw new InvalidOperationException("No se pudo obtener la cadena de conexión de ninguna fuente.");
+}
+
+// 5. Registrar servicios
 ConfigureServices(builder.Services, connectionString);
 
 var app = builder.Build();
 
-// 5. Configurar el pipeline HTTP
+// 6. Configurar el pipeline HTTP
 ConfigurePipeline(app);
 
 app.Run();
@@ -37,66 +49,80 @@ app.Run();
 // Métodos auxiliares
 static string GetConnectionString(IConfiguration configuration, IHostEnvironment env)
 {
-    // 1. Intentar obtener de la variable de entorno específica
-    var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
-
-    // 2. Si no está en la variable de entorno, obtener del archivo de configuración
-    if (string.IsNullOrEmpty(connectionString))
+    try
     {
-        connectionString = configuration.GetConnectionString("DefaultConnection");
+        // 1. Intentar obtener de la variable de entorno de Railway
+        var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+
+        // 2. Si estamos en Railway y tenemos DATABASE_URL, formatearla
+        if (!string.IsNullOrEmpty(databaseUrl) && databaseUrl.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine("Usando DATABASE_URL de Railway");
+            return ConvertPostgresUrlToConnectionString(databaseUrl);
+        }
+
+        // 3. Intentar obtener de la configuración
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (!string.IsNullOrEmpty(connectionString))
+        {
+            Console.WriteLine("Usando cadena de conexión de configuración");
+            return connectionString;
+        }
+
+        // 4. Valor por defecto para desarrollo local
+        if (env.IsDevelopment())
+        {
+            Console.WriteLine("Usando cadena de conexión de desarrollo local");
+            return "Host=localhost;Database=booksdb;Username=postgres;Password=tu_contraseña;";
+        }
+
+        return null;
     }
-
-    // 3. Si es una URL de Railway (formato postgres://)
-    if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+    catch (Exception ex)
     {
-        connectionString = ConvertPostgresUrlToConnectionString(connectionString);
+        Console.WriteLine($"Error al obtener la cadena de conexión: {ex.Message}");
+        throw;
     }
-
-    // 4. Validar que tengamos una cadena de conexión
-    if (string.IsNullOrEmpty(connectionString))
-    {
-        throw new InvalidOperationException("No se pudo obtener la cadena de conexión de ninguna fuente.");
-    }
-
-    // 5. Loggear la configuración (sin contraseña)
-    var safeConnectionString = new NpgsqlConnectionStringBuilder(connectionString)
-    {
-        Password = "***"
-    }.ToString();
-
-    Console.WriteLine($"\n=== MODO: {env.EnvironmentName} ===");
-    Console.WriteLine($"=== CADENA DE CONEXIÓN UTILIZADA ===");
-    Console.WriteLine(safeConnectionString);
-    Console.WriteLine("==================================\n");
-
-    return connectionString;
 }
 
 static string ConvertPostgresUrlToConnectionString(string url)
 {
-    var uri = new Uri(url);
-    var userInfo = uri.UserInfo.Split(':');
-
-    return new NpgsqlConnectionStringBuilder
+    try
     {
-        Host = uri.Host,
-        Port = uri.Port,
-        Database = uri.AbsolutePath.TrimStart('/'),
-        Username = userInfo[0],
-        Password = userInfo[1],
-        SslMode = SslMode.Require,
-        TrustServerCertificate = true
-    }.ToString();
+        var uri = new Uri(url);
+        var userInfo = uri.UserInfo.Split(':');
+
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Database = uri.AbsolutePath.TrimStart('/'),
+            Username = userInfo[0],
+            Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
+            SslMode = SslMode.Require,
+            TrustServerCertificate = true,
+            Pooling = true,
+            MinPoolSize = 1,
+            MaxPoolSize = 20
+        };
+
+        return builder.ConnectionString;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error al convertir la URL de la base de datos: {ex.Message}");
+        throw new FormatException("Formato de URL de base de datos no válido", ex);
+    }
 }
 
 static void ConfigureServices(IServiceCollection services, string connectionString)
 {
-    // 1. Configurar la conexión a la base de datos
-    services.AddScoped(_ =>
+    // 1. Registrar la conexión como singleton (opcional, puedes usar scoped si lo prefieres)
+    services.AddSingleton(_ =>
     {
-        var connection = new NpgsqlConnection(connectionString);
-        connection.Open();
-        return connection;
+        var conn = new NpgsqlConnection(connectionString);
+        conn.Open();
+        return conn;
     });
 
     // 2. Configurar servicios de la aplicación
@@ -154,9 +180,11 @@ static void ConfigurePipeline(WebApplication app)
     app.UseRouting();
     app.UseAuthorization();
 
-    // 3. Configurar CORS (ajustar según necesidades)
+    // 3. Configurar CORS
     app.UseCors(policy =>
-        policy.WithOrigins("http://localhost:3000", "https://tudominio.com")
+        policy.WithOrigins(
+                "http://localhost:3000",
+                "https://your-production-domain.com")
               .AllowAnyMethod()
               .AllowAnyHeader());
 
@@ -164,8 +192,6 @@ static void ConfigurePipeline(WebApplication app)
     app.UseEndpoints(endpoints =>
     {
         endpoints.MapControllers();
-
-        // Health check endpoint
         endpoints.MapGet("/health", () => "Healthy");
     });
 
