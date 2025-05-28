@@ -223,8 +223,7 @@ static void ConfigurePipeline(WebApplication app)
     // Configurar CORS
     app.UseCors(policy =>
         policy.WithOrigins(
-                "http://localhost:3000",
-                "https://booksapireview-production.up.railway.app")
+                "*")
               .AllowAnyMethod()
               .AllowAnyHeader());
 
