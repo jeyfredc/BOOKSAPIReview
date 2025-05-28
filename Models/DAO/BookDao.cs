@@ -27,17 +27,37 @@ namespace BooksAPIReviews.Models.DAO
                 {
                     await connection.OpenAsync();
                     var query = @"
-                        SELECT id, title, author, description, cover_image_url, 
-                               published_date, average_rating, 
-                               review_count, created_at, updated_at 
-                        FROM books";
+                SELECT 
+                    id, 
+                    title, 
+                    author, 
+                    description, 
+                    cover_image_url, 
+                    published_date, 
+                    average_rating,  -- Sin conversión a texto
+                    review_count, 
+                    created_at, 
+                    updated_at
+                FROM books";
 
                     using (var command = new NpgsqlCommand(query, connection))
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
                         {
-                            books.Add(MapToBookResponse(reader));
+                            books.Add(new BookResponseDto
+                            {
+                                Id = reader.GetGuid(0),
+                                Title = reader.GetString(1),
+                                Author = reader.GetString(2),
+                                Description = reader.IsDBNull(3) ? null : reader.GetString(3),
+                                CoverImageUrl = reader.IsDBNull(4) ? null : reader.GetString(4),
+                                PublishedDate = reader.IsDBNull(5) ? (DateTime?)null : reader.GetDateTime(5),
+                                AverageRating = reader.IsDBNull(6) ? 0m : reader.GetDecimal(6),  // Lee como decimal
+                                ReviewCount = reader.GetInt32(7),
+                                CreatedAt = reader.GetDateTime(8),
+                                UpdatedAt = reader.GetDateTime(9)
+                            });
                         }
                     }
                 }
