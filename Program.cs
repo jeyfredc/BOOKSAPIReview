@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using System;
 
@@ -38,26 +39,29 @@ if (string.IsNullOrEmpty(connectionString))
     throw new InvalidOperationException("No se pudo obtener la cadena de conexión de ninguna fuente.");
 }
 
-// 5. Configurar servicios
-ConfigureServices(builder.Services, connectionString);
-
-var app = builder.Build();
-
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
-
-// 6. Configurar el pipeline HTTP
-ConfigurePipeline(app);
-
-// 7. Iniciar la aplicación
+// 5. Configurar Kestrel
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.ListenAnyIP(int.Parse(port));
 });
 
+// 6. Configurar servicios
+ConfigureServices(builder.Services, connectionString);
+
+var app = builder.Build();
+
+// 7. Configurar headers de proxy
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+// 8. Configurar el pipeline HTTP
+ConfigurePipeline(app);
+
+// 9. Iniciar la aplicación
+Console.WriteLine($"Iniciando aplicación en el puerto {port}");
 app.Urls.Clear();
 app.Urls.Add($"http://0.0.0.0:{port}");
 app.Run();
@@ -143,7 +147,7 @@ static string ConvertPostgresUrlToConnectionString(string databaseUrl)
     catch (Exception ex)
     {
         Console.WriteLine($"Error al convertir la URL de la base de datos: {ex.Message}");
-        return databaseUrl; // Devuelve la cadena original si hay un error
+        return databaseUrl;
     }
 }
 
@@ -188,6 +192,7 @@ static void ConfigureServices(IServiceCollection services, string connectionStri
                 .AllowAnyMethod()
                 .AllowAnyHeader());
     });
+
     // Configurar Swagger
     services.AddEndpointsApiExplorer();
     services.AddSwaggerGen(c =>
@@ -235,26 +240,22 @@ static void ConfigurePipeline(WebApplication app)
         app.UseHsts();
     }
 
-    if (app.Environment.IsDevelopment())
+    // Configuración común para todos los entornos
+    app.UseRouting();
+    app.UseCors("AllowAll");
+
+    // Solo redirigir a HTTPS si no estamos en desarrollo
+    if (!app.Environment.IsDevelopment())
     {
-        // En desarrollo, redirigir a HTTPS
-        app.UseHttpsRedirection();
-    }
-    else
-    {
-        // En producción, permitir tanto HTTP como HTTPS
         app.UseWhen(
             context => context.Request.IsHttps,
             builder => builder.UseHttpsRedirection()
         );
     }
-
-    // Configuración común para todos los entornos
-    app.UseHttpsRedirection();
-    app.UseRouting();
-
-    // CORS debe estar después de UseRouting y antes de UseAuthorization
-    app.UseCors("AllowAll");
+    else
+    {
+        app.UseHttpsRedirection();
+    }
 
     app.UseAuthorization();
 
