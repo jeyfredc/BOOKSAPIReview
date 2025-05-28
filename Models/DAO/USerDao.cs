@@ -32,6 +32,11 @@ namespace BooksAPIReviews.Models.DAO
             {
                 await EnsureConnectionOpenAsync();
             }
+
+            if (_connection.State != System.Data.ConnectionState.Open)
+            {
+                await _connection.OpenAsync();
+            }
         }
 
         public async Task<IEnumerable<UserResponseDto>> GetAllAsync()
