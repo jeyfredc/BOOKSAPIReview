@@ -14,8 +14,8 @@
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
-        public String User_Id { get; set; }
+        public Guid User_Id { get; set; }
 
-        public string Review_Id { get; set; }
+        public Guid Review_Id { get; set; }
     }
 }

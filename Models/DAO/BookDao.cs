@@ -140,8 +140,8 @@ namespace BooksAPIReviews.Models.DAO
                                 ReviewCount = reader.GetInt32(8),
                                 CreatedAt = reader.GetDateTime(9),
                                 UpdatedAt = reader.IsDBNull(10) ? (DateTime?)null : reader.GetDateTime(10),
-                                User_Id = reader.GetString(11),
-                                Review_Id = reader.GetString(12),
+                                User_Id = reader.GetGuid(11),
+                                Review_Id = reader.GetGuid(12),
                             };
                         }
                     }
@@ -243,6 +243,7 @@ namespace BooksAPIReviews.Models.DAO
                     command.Parameters.AddWithValue("publishedDate", (object)bookDto.PublishedDate ?? DBNull.Value);
                     command.Parameters.AddWithValue("category", (object)bookDto.Category ?? DBNull.Value);
                     command.Parameters.AddWithValue("updatedAt", DateTime.UtcNow);
+                    
 
                     int rowsAffected = await command.ExecuteNonQueryAsync();
                     return rowsAffected > 0;
