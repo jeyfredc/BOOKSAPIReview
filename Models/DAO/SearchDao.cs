@@ -8,13 +8,24 @@ namespace BooksAPIReviews.Models.DAO
 {
     public class SearchDao 
     {
-        private readonly IConfiguration _configuration;
+        private readonly NpgsqlConnection _connection;
         private readonly ILogger<SearchDao> _logger;
 
-        public SearchDao(IConfiguration configuration, ILogger<SearchDao> logger)
+        // Inyectamos la conexión directamente
+        public SearchDao(NpgsqlConnection _connection, ILogger<SearchDao> logger)
         {
-            _configuration = configuration;
-            _logger = logger;
+            _connection = _connection ?? throw new ArgumentNullException(nameof(_connection));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            // Verificar la conexión
+            if (string.IsNullOrEmpty(_connection.ConnectionString))
+            {
+                _logger.LogError("La cadena de conexión está vacía");
+                throw new InvalidOperationException("La cadena de conexión no está configurada");
+            }
+
+            _logger.LogInformation("SearchDao inicializado con la cadena: {0}",
+                new NpgsqlConnectionStringBuilder(_connection.ConnectionString) { Password = "***" });
         }
 
         public async Task<(IEnumerable<BookSearchResultDto> Books, int TotalCount)> SearchBooksAsync(
@@ -22,8 +33,7 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
+
                     await _connection.OpenAsync();
 
                     // Primero obtenemos el conteo total
@@ -103,7 +113,7 @@ namespace BooksAPIReviews.Models.DAO
                     }
 
                     return (books, totalCount);
-                }
+                
             }
             catch (Exception ex)
             {
@@ -117,8 +127,7 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
+
                     await _connection.OpenAsync();
 
                     // Primero obtenemos el conteo total
@@ -184,7 +193,7 @@ namespace BooksAPIReviews.Models.DAO
                     }
 
                     return (books, totalCount);
-                }
+                
             }
             catch (Exception ex)
             {
@@ -198,8 +207,7 @@ namespace BooksAPIReviews.Models.DAO
         {
             try
             {
-                using (var _connection = new NpgsqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-                {
+          
                     await _connection.OpenAsync();
 
                     // Construir la consulta dinámicamente
@@ -304,7 +312,7 @@ namespace BooksAPIReviews.Models.DAO
                     }
 
                     return (reviews, totalCount);
-                }
+                
             }
             catch (Exception ex)
             {
