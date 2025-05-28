@@ -39,7 +39,9 @@ namespace BooksAPIReviews.Services
                 {
                     Username = registerDto.Username,
                     Email = registerDto.Email,
-                    Password = password
+                    Password = password,
+                    FirstName= registerDto.FirstName,
+                    LastName = registerDto.LastName
                 };
 
                 var createdUser = await _userDao.CreateAsync(user, password);

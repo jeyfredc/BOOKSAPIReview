@@ -84,7 +84,7 @@ namespace BooksAPIReviews.Controllers
             try
             {
                 var createdBook = await _bookService.CreateBookAsync(bookDto);
-                return CreatedAtAction(nameof(GetBook), new { id = createdBook.Id }, createdBook);
+                return CreatedAtAction(nameof(GetBook), new { id = createdBook.Book_Id }, createdBook);
             }
             catch (InvalidOperationException ex)
             {
