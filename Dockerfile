@@ -1,21 +1,17 @@
-# Imagen base con .NET 8 SDK
+# Etapa base (runtime)
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
-EXPOSE 80
+EXPOSE 8080
 
+# Etapa de build
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-
-# Copiar archivos del proyecto
 COPY . .
-
-# Restaurar paquetes y compilar
 RUN dotnet restore
 RUN dotnet publish -c Release -o /app/publish
 
+# Etapa final
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
-
-# Ejecutar la app
 ENTRYPOINT ["dotnet", "BooksAPIReviews.dll"]
