@@ -110,14 +110,28 @@ namespace BooksAPIReviews.Models.DAO
                 await EnsureConnectionOpenAsync();
 
                 var query = @"
-                    SELECT 
-                    b.id as book_id, title, author, description, cover_image_url, 
-                    published_date, category, average_rating, 
-                    review_count, b.created_at, b.updated_at ,
-                    r.user_id as user_id , r.id as review_id
-                    FROM books b
-                    inner join reviews r on b.id = r.book_id
-                    WHERE b.id = @id";
+            SELECT 
+                b.id as book_id, 
+                b.title, 
+                b.author, 
+                b.description, 
+                b.cover_image_url, 
+                b.published_date, 
+                b.category, 
+                b.average_rating, 
+                b.review_count, 
+                b.created_at, 
+                b.updated_at,
+                r.user_id as user_id, 
+                r.id as review_id,
+                r.rating,
+                r.comment,
+                r.created_at as review_created_at
+            FROM books b
+            LEFT JOIN reviews r ON b.id = r.book_id
+            WHERE b.id = @id
+            ORDER BY r.created_at DESC
+            LIMIT 1";
 
                 using (var command = new NpgsqlCommand(query, _connection))
                 {
@@ -127,7 +141,7 @@ namespace BooksAPIReviews.Models.DAO
                     {
                         if (await reader.ReadAsync())
                         {
-                            return new BookResponseDto
+                            var response = new BookResponseDto
                             {
                                 Book_Id = reader.GetGuid(0),
                                 Title = reader.GetString(1),
@@ -139,10 +153,23 @@ namespace BooksAPIReviews.Models.DAO
                                 AverageRating = reader.GetDecimal(7),
                                 ReviewCount = reader.GetInt32(8),
                                 CreatedAt = reader.GetDateTime(9),
-                                UpdatedAt = reader.IsDBNull(10) ? (DateTime?)null : reader.GetDateTime(10),
-                                User_Id = reader.GetGuid(11),
-                                Review_Id = reader.GetGuid(12),
+                                UpdatedAt = reader.IsDBNull(10) ? (DateTime?)null : reader.GetDateTime(10)
                             };
+
+                            // Manejar campos que podrían ser nulos
+                            if (!reader.IsDBNull(11))
+                            {
+                                response.User_Id = reader.GetGuid(11);
+                            }
+
+                            if (!reader.IsDBNull(12))
+                            {
+                                response.Review_Id = reader.GetGuid(12);
+                            }
+
+
+
+                            return response;
                         }
                     }
                 }
