@@ -12,7 +12,7 @@ namespace BooksAPIReviews.Models.DTOs
 
     public class BookSearchResultDto
     {
-        public Guid Id { get; set; }
+        public Guid Book_Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Author { get; set; } = string.Empty;
         public string? Description { get; set; }

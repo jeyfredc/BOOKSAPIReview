@@ -68,7 +68,7 @@ namespace BooksAPIReviews.Models.DAO
                     // Luego obtenemos los datos paginados
                     var query = @"
                         SELECT 
-                            id,
+                            id as book_id,
                             title,
                             author,
                             description,
@@ -105,7 +105,7 @@ namespace BooksAPIReviews.Models.DAO
                             {
                                 books.Add(new BookSearchResultDto
                                 {
-                                    Id = reader.GetGuid(0),
+                                    Book_Id = reader.GetGuid(0),
                                     Title = reader.GetString(1),
                                     Author = reader.GetString(2),
                                     Description = reader.IsDBNull(3) ? null : reader.GetString(3),
@@ -158,7 +158,7 @@ namespace BooksAPIReviews.Models.DAO
                     // Luego obtenemos los datos paginados
                     var query = @"
                         SELECT 
-                            id,
+                            id as book_id,
                             title,
                             author,
                             description,
@@ -185,7 +185,7 @@ namespace BooksAPIReviews.Models.DAO
                             {
                                 books.Add(new BookSearchResultDto
                                 {
-                                    Id = reader.GetGuid(0),
+                                    Book_Id = reader.GetGuid(0),
                                     Title = reader.GetString(1),
                                     Author = reader.GetString(2),
                                     Description = reader.IsDBNull(3) ? null : reader.GetString(3),
