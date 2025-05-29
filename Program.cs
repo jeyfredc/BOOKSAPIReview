@@ -220,7 +220,7 @@ static void ConfigureServices(IServiceCollection services, string connectionStri
 static void ConfigurePipeline(WebApplication app)
 {
     // Configurar el entorno de desarrollo
-    if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+    if (true)
     {
         app.UseDeveloperExceptionPage();
         app.UseSwagger();
