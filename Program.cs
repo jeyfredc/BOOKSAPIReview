@@ -1,4 +1,3 @@
-using BooksAPIReviews.Interfaces;
 using BooksAPIReviews.Models.DAO;
 using BooksAPIReviews.Services;
 using Microsoft.AspNetCore.Builder;
@@ -208,14 +207,11 @@ static void ConfigureServices(IServiceCollection services, string connectionStri
     // Registrar servicios personalizados
     services.AddScoped<IBookService, BookService>();
     services.AddScoped<IAuthService, AuthService>();
-    services.AddScoped<ICategoryService, CategoryService>();
     services.AddScoped<IReviewService, ReviewService>();
     services.AddScoped<ISearchService, SearchService>();
-    services.AddScoped<IUserService, UserService>();
 
     // Registrar DAOs
     services.AddScoped<BookDao>();
-    services.AddScoped<CategoryDao>();
     services.AddScoped<ReviewDao>();
     services.AddScoped<SearchDao>();
     services.AddScoped<UserDao>();
@@ -263,7 +259,7 @@ static void ConfigurePipeline(WebApplication app)
     app.UseEndpoints(endpoints =>
     {
         endpoints.MapControllers();
-        endpoints.MapGet("/health", () => "Healthy");
+
     });
 
     // Redirección a Swagger en desarrollo

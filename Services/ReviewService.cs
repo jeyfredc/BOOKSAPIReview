@@ -26,18 +26,6 @@ namespace BooksAPIReviews.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<IEnumerable<ReviewResponseDto>> GetReviewsAsync()
-        {
-            try
-            {
-                return await _reviewDao.GetAllAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener las reseñas");
-                throw;
-            }
-        }
 
         public async Task<List<ReviewResponseDto>> GetReviewByIdAsync(Guid id)
         {
@@ -76,42 +64,16 @@ namespace BooksAPIReviews.Services
             }
         }
 
-        public async Task<IEnumerable<ReviewResponseDto>> GetReviewsByUserIdAsync(Guid userId)
-        {
-            try
-            {
-                // Verificar que el usuario existe
-                var userExists = await _userDao.ExistsAsync(userId);
-                if (!userExists)
-                {
-                    throw new KeyNotFoundException($"No se encontró el usuario con ID: {userId}");
-                }
-
-                return await _reviewDao.GetByUserIdAsync(userId);
-            }
-            catch (KeyNotFoundException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al obtener las reseñas del usuario con ID: {userId}");
-                throw;
-            }
-        }
-
         public async Task<ReviewResponseDto> CreateReviewAsync(ReviewCreateDto reviewDto)
         {
             try
             {
-                // Validar que el libro existe
                 var bookExists = await _bookDao.ExistsAsync(reviewDto.BookId);
                 if (!bookExists)
                 {
                     throw new KeyNotFoundException($"No se encontró el libro con ID: {reviewDto.BookId}");
                 }
 
-                // Validar que el usuario existe
                 var userExists = await _userDao.ExistsAsync(reviewDto.UserId);
                 if (!userExists)
                 {
@@ -134,53 +96,8 @@ namespace BooksAPIReviews.Services
             }
         }
 
-        public async Task<bool> UpdateReviewAsync(Guid id, ReviewCreateDto reviewDto)
-        {
-            try
-            {
-                var review = await _reviewDao.GetByIdAsync(id);
-                if (review == null)
-                {
-                    return false;
-                }
-
-                // Validar que el libro existe
-                var bookExists = await _bookDao.ExistsAsync(reviewDto.BookId);
-                if (!bookExists)
-                {
-                    throw new KeyNotFoundException($"No se encontró el libro con ID: {reviewDto.BookId}");
-                }
-
-                // Validar que el usuario existe
-                var userExists = await _userDao.ExistsAsync(reviewDto.UserId);
-                if (!userExists)
-                {
-                    throw new KeyNotFoundException($"No se encontró el usuario con ID: {reviewDto.UserId}");
-                }
 
 
-
-                return await _reviewDao.UpdateAsync(id, reviewDto);
-            }
-            catch (Exception ex) when (ex is not (KeyNotFoundException or UnauthorizedAccessException or InvalidOperationException))
-            {
-                _logger.LogError(ex, $"Error al actualizar la reseña con ID: {id}");
-                throw;
-            }
-        }
-
-        public async Task<bool> DeleteReviewAsync(Guid id)
-        {
-            try
-            {
-                return await _reviewDao.DeleteAsync(id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al eliminar la reseña con ID: {id}");
-                throw;
-            }
-        }
 
         public async Task<bool> ReviewExistsAsync(Guid id)
         {

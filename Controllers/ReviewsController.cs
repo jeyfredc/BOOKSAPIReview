@@ -22,24 +22,7 @@ namespace BooksAPIReviews.Controllers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        /// <summary>
-        /// Obtiene todas las reseñas
-        /// </summary>
-        [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<ReviewResponseDto>))]
-        public async Task<ActionResult<IEnumerable<ReviewResponseDto>>> GetReviews()
-        {
-            try
-            {
-                var reviews = await _reviewService.GetReviewsAsync();
-                return Ok(reviews);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener las reseñas");
-                return StatusCode(500, new { message = "Ocurrió un error al procesar la solicitud" });
-            }
-        }
+
 
         /// <summary>
         /// Obtiene una reseña por su ID
@@ -68,55 +51,6 @@ namespace BooksAPIReviews.Controllers
             }
         }
 
-        /// <summary>
-        /// Obtiene las reseñas de un libro
-        /// </summary>
-        /// <param name="bookId">ID del libro</param>
-        [HttpGet("book/{bookId}")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<ReviewResponseDto>))]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<ReviewResponseDto>>> GetReviewsByBook(Guid bookId)
-        {
-            try
-            {
-                var reviews = await _reviewService.GetReviewsByBookIdAsync(bookId);
-                return Ok(reviews);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al obtener las reseñas del libro con ID: {bookId}");
-                return StatusCode(500, new { message = "Ocurrió un error al procesar la solicitud" });
-            }
-        }
-
-        /// <summary>
-        /// Obtiene las reseñas de un usuario
-        /// </summary>
-        /// <param name="userId">ID del usuario</param>
-        [HttpGet("user/{userId}")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<ReviewResponseDto>))]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<ReviewResponseDto>>> GetReviewsByUser(Guid userId)
-        {
-            try
-            {
-                var reviews = await _reviewService.GetReviewsByUserIdAsync(userId);
-                return Ok(reviews);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al obtener las reseñas del usuario con ID: {userId}");
-                return StatusCode(500, new { message = "Ocurrió un error al procesar la solicitud" });
-            }
-        }
 
         /// <summary>
         /// Crea una nueva reseña
@@ -153,79 +87,5 @@ namespace BooksAPIReviews.Controllers
             }
         }
 
-        /// <summary>
-        /// Actualiza una reseña existente
-        /// </summary>
-        /// <param name="id">ID de la reseña a actualizar</param>
-        /// <param name="reviewDto">Datos actualizados de la reseña</param>
-        [HttpPut("{id}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
-        public async Task<IActionResult> UpdateReview(Guid id, [FromBody] ReviewCreateDto reviewDto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(new { message = "Datos de entrada no válidos", errors = ModelState });
-            }
-
-            try
-            {
-                var updated = await _reviewService.UpdateReviewAsync(id, reviewDto);
-
-                if (!updated)
-                {
-                    return NotFound(new { message = $"No se encontró la reseña con ID: {id}" });
-                }
-
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al actualizar la reseña con ID: {id}");
-                return StatusCode(500, new { message = "Ocurrió un error al actualizar la reseña" });
-            }
-        }
-
-        /// <summary>
-        /// Elimina una reseña
-        /// </summary>
-        /// <param name="id">ID de la reseña a eliminar</param>
-        [HttpDelete("{id}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeleteReview(Guid id)
-        {
-            try
-            {
-                var deleted = await _reviewService.DeleteReviewAsync(id);
-
-                if (!deleted)
-                {
-                    return NotFound(new { message = $"No se encontró la reseña con ID: {id}" });
-                }
-
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al eliminar la reseña con ID: {id}");
-                return StatusCode(500, new { message = "Ocurrió un error al eliminar la reseña" });
-            }
-        }
     }
 }

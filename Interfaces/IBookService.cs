@@ -9,9 +9,7 @@ namespace BooksAPIReviews.Services
     {
         Task<IEnumerable<BookResponseDto>> GetBooksAsync();
         Task<BookResponseDto> GetBookByIdAsync(Guid id);
-        Task<BookResponseDto> CreateBookAsync(BookCreateDto bookDto);
-        Task<bool> UpdateBookAsync(Guid id, BookCreateDto bookDto);
-        Task<bool> DeleteBookAsync(Guid id);
+
         Task<bool> BookExistsAsync(Guid id);
     }
 }

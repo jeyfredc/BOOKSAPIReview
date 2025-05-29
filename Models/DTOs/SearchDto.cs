@@ -23,15 +23,5 @@ namespace BooksAPIReviews.Models.DTOs
         public DateTime CreatedAt { get; set; }
     }
 
-    public class ReviewSearchResultDto
-    {
-        public Guid Id { get; set; }
-        public Guid BookId { get; set; }
-        public string BookTitle { get; set; } = string.Empty;
-        public string BookCategory { get; set; } = string.Empty;
-        public string UserName { get; set; } = string.Empty;
-        public int Rating { get; set; }
-        public string? Comment { get; set; }
-        public DateTime CreatedAt { get; set; }
-    }
+
 }
